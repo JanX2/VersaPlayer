@@ -134,6 +134,12 @@ open class VersaPlayerControls: View {
         }
     }
     
+    /// Notifies when video quality changed
+    ///
+    open func videoQualityChanged(to quality: VideoQuality) {
+        print("Changed")
+    }
+    
     public func setSeekbarSlider(start startValue: Double, end endValue: Double, at time: Double) {
         #if os(macOS)
         seekbarSlider?.minValue = startValue
@@ -249,43 +255,48 @@ open class VersaPlayerControls: View {
             bottomAnchor.constraint(equalTo: parent.bottomAnchor).isActive = true
         }
     }
-
+    
     /// Detect the notfication listener
     private func checkOwnershipOf(object: Any?, completion: @autoclosure ()->()?) {
-      guard let ownerPlayer = object as? VersaPlayer else { return }
-      if ownerPlayer.isEqual(handler?.player) {
-        completion()
-      }
+        guard let ownerPlayer = object as? VersaPlayer else { return }
+        if ownerPlayer.isEqual(handler?.player) {
+            completion()
+        }
     }
-
+    
     /// Prepares the notification observers/listeners
     open func prepareNotificationListener() {
-      NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.timeChanged.notification, object: nil, queue: OperationQueue.main) { [weak self] (notification) in
-        guard let self = self else { return }
-        if let time = notification.userInfo?[VersaPlayer.VPlayerNotificationInfoKey.time.rawValue] as? CMTime {
-          self.checkOwnershipOf(object: notification.object, completion: self.timeDidChange(toTime: time))
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.timeChanged.notification, object: nil, queue: OperationQueue.main) { [weak self] (notification) in
+            guard let self = self else { return }
+            if let time = notification.userInfo?[VersaPlayer.VPlayerNotificationInfoKey.time.rawValue] as? CMTime {
+                self.checkOwnershipOf(object: notification.object, completion: self.timeDidChange(toTime: time))
+            }
         }
-      }
-      NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.didEnd.notification, object: nil, queue: OperationQueue.main) { [weak self] (notification) in
-        guard let self = self else { return }
-        self.checkOwnershipOf(object: notification.object, completion: self.playPauseButton?.set(active: false))
-      }
-      NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.play.notification, object: nil, queue: OperationQueue.main) { [weak self]  (notification) in
-        guard let self = self else { return }
-        self.checkOwnershipOf(object: notification.object, completion: self.playPauseButton?.set(active: true))
-      }
-      NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.pause.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
-        guard let self = self else { return }
-        self.checkOwnershipOf(object: notification.object, completion: self.playPauseButton?.set(active: false))
-      }
-      NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.endBuffering.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
-        guard let self = self else { return }
-        self.checkOwnershipOf(object: notification.object, completion: self.hideBuffering())
-      }
-      NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.buffering.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
-        guard let self = self else { return }
-        self.checkOwnershipOf(object: notification.object, completion: self.showBuffering())
-      }
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.didEnd.notification, object: nil, queue: OperationQueue.main) { [weak self] (notification) in
+            guard let self = self else { return }
+            self.checkOwnershipOf(object: notification.object, completion: self.playPauseButton?.set(active: false))
+        }
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.play.notification, object: nil, queue: OperationQueue.main) { [weak self]  (notification) in
+            guard let self = self else { return }
+            self.checkOwnershipOf(object: notification.object, completion: self.playPauseButton?.set(active: true))
+        }
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.pause.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
+            guard let self = self else { return }
+            self.checkOwnershipOf(object: notification.object, completion: self.playPauseButton?.set(active: false))
+        }
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.endBuffering.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
+            guard let self = self else { return }
+            self.checkOwnershipOf(object: notification.object, completion: self.hideBuffering())
+        }
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.buffering.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
+            guard let self = self else { return }
+            self.checkOwnershipOf(object: notification.object, completion: self.showBuffering())
+        }
+        
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
+            guard let self = self, let videoQuality = notification.userInfo?["data"] as? VideoQuality else { return }
+            self.checkOwnershipOf(object: notification.object, completion: self.videoQualityChanged(to: videoQuality))
+        }
     }
     
     /// Prepare the seekbar values
@@ -435,5 +446,5 @@ open class VersaPlayerControls: View {
             }
         }
     }
-
+    
 }

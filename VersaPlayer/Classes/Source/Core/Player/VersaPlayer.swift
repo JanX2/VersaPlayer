@@ -28,6 +28,7 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
         case buffering = "VERSA_PLAYER_BUFFERING"
         case endBuffering = "VERSA_PLAYER_END_BUFFERING"
         case didEnd = "VERSA_PLAYER_END_PLAYING"
+        case videoQualityChanged = "VERSA_PLAYER_VIDEO_QUALITY_CHANGED"
         
         /// Notification name representation
         public var notification: NSNotification.Name {
@@ -45,6 +46,8 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
     
     /// Whether player is buffering
     public var isBuffering: Bool = false
+    
+    public var quality: VideoQuality = .init(type: .auto, resolution: .zero)
     
     deinit {
         NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVPlayerItemTimeJumped, object: self)
@@ -86,6 +89,7 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
             currentItem!.removeObserver(self, forKeyPath: "playbackLikelyToKeepUp")
             currentItem!.removeObserver(self, forKeyPath: "playbackBufferFull")
             currentItem!.removeObserver(self, forKeyPath: "status")
+            currentItem!.removeObserver(self, forKeyPath: "presentationSize")
         }
         
         super.replaceCurrentItem(with: item)
@@ -95,6 +99,7 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
             newItem.addObserver(self, forKeyPath: "playbackLikelyToKeepUp", options: .new, context: nil)
             newItem.addObserver(self, forKeyPath: "playbackBufferFull", options: .new, context: nil)
             newItem.addObserver(self, forKeyPath: "status", options: .new, context: nil)
+            newItem.addObserver(self, forKeyPath: "presentationSize", options: .new, context: nil)
         }
     }
     
@@ -138,27 +143,27 @@ extension VersaPlayer {
     
     /// Prepare players playback delegate observers
     open func preparePlayerPlaybackDelegate() {
-      NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: nil, queue: OperationQueue.main) { [weak self] (notification) in
-        guard let self = self else { return }
-        NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.didEnd.notification, object: self, userInfo: nil)
-        self.handler?.playbackDelegate?.playbackDidEnd(player: self)
-      }
-      NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemTimeJumped, object: self, queue: OperationQueue.main) { [weak self] (notification) in
-        guard let self = self else { return }
-        self.handler?.playbackDelegate?.playbackDidJump(player: self)
-      }
-      addPeriodicTimeObserver(
-        forInterval: CMTime(
-          seconds: 1,
-          preferredTimescale: CMTimeScale(NSEC_PER_SEC)
-        ),
-        queue: DispatchQueue.main) { [weak self] (time) in
-          guard let self = self else { return }
-          NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.timeChanged.notification, object: self, userInfo: [VPlayerNotificationInfoKey.time.rawValue: time])
-          self.handler?.playbackDelegate?.timeDidChange(player: self, to: time)
-      }
-
-      addObserver(self, forKeyPath: "status", options: NSKeyValueObservingOptions.new, context: nil)
+        NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: nil, queue: OperationQueue.main) { [weak self] (notification) in
+            guard let self = self else { return }
+            NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.didEnd.notification, object: self, userInfo: nil)
+            self.handler?.playbackDelegate?.playbackDidEnd(player: self)
+        }
+        NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemTimeJumped, object: self, queue: OperationQueue.main) { [weak self] (notification) in
+            guard let self = self else { return }
+            self.handler?.playbackDelegate?.playbackDidJump(player: self)
+        }
+        addPeriodicTimeObserver(
+            forInterval: CMTime(
+                seconds: 1,
+                preferredTimescale: CMTimeScale(NSEC_PER_SEC)
+            ),
+            queue: DispatchQueue.main) { [weak self] (time) in
+                guard let self = self else { return }
+                NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.timeChanged.notification, object: self, userInfo: [VPlayerNotificationInfoKey.time.rawValue: time])
+                self.handler?.playbackDelegate?.timeDidChange(player: self, to: time)
+        }
+        
+        addObserver(self, forKeyPath: "status", options: NSKeyValueObservingOptions.new, context: nil)
     }
     
     /// Value observer
@@ -214,9 +219,9 @@ extension VersaPlayer {
                         }
                         handler.playbackDelegate?.playbackDidFailed(with: playbackError)
                     }
-
+                    
                     if status == .readyToPlay, let currentItem = self.currentItem as? VersaPlayerItem {
-                      handler.playbackDelegate?.playbackItemReady(player: self, item: currentItem)
+                        handler.playbackDelegate?.playbackItemReady(player: self, item: currentItem)
                     }
                 }
             case "playbackBufferEmpty":
@@ -231,6 +236,22 @@ extension VersaPlayer {
                 isBuffering = false
                 NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.endBuffering.notification, object: self, userInfo: nil)
                 handler.playbackDelegate?.endBuffering(player: self)
+            case "presentationSize":
+                guard let item = object as? AVPlayerItem, let videoTrack = (item.tracks.first{$0.assetTrack?.mediaType == .video})?.assetTrack else {return}
+                var videoResolution = videoTrack.naturalSize
+                if videoResolution == .zero, let newSize = change?[.newKey] as? CGSize {
+                    videoResolution = newSize
+                }
+                var resolutionChanged: Bool = false
+                if quality.resolution.height != videoResolution.height {
+                    resolutionChanged = true
+                }
+                if quality.type == .auto {
+                    quality.resolution = videoResolution
+                }
+                if resolutionChanged {
+                    NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": quality])
+                }
             default:
                 break;
             }

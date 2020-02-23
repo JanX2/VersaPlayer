@@ -28,8 +28,20 @@ public typealias PIPProtocol = AVPictureInPictureControllerDelegate
 public protocol PIPProtocol {}
 #endif
 
+public struct VideoQuality {
+    public var type: VideoQualityType
+    public var resolution: CGSize
+}
+
+extension VideoQuality {
+    public enum VideoQualityType {
+        case auto
+        case manual
+    }
+}
+
 open class VersaPlayerView: View, PIPProtocol {
-    
+
     deinit {
         player.replaceCurrentItem(with: nil)
     }
@@ -77,7 +89,7 @@ open class VersaPlayerView: View, PIPProtocol {
     
     /// Whether PIP Mode is enabled via pipController
     public var isPipModeEnabled: Bool = false
-    
+        
     #if os(macOS)
     open override var wantsLayer: Bool {
         get { return true } set { }
