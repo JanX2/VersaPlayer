@@ -33,7 +33,7 @@ public class VideoQuality {
     public var type: VideoQualityType
     public var resolution: CGSize
     
-    public func init(type: VideoQualityType, resolution: CGSize) {
+    public init(type: VideoQualityType, resolution: CGSize) {
         self.type = type
         self.resolution = resolution
     }
