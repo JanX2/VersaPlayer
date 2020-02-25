@@ -28,9 +28,15 @@ public typealias PIPProtocol = AVPictureInPictureControllerDelegate
 public protocol PIPProtocol {}
 #endif
 
-public struct VideoQuality {
+public class VideoQuality {
+    public static var auto: VideoQuality = .init(type: .auto, resolution: .zero)
     public var type: VideoQualityType
     public var resolution: CGSize
+    
+    public func init(type: VideoQualityType, resolution: CGSize) {
+        self.type = type
+        self.resolution = resolution
+    }
 }
 
 extension VideoQuality {
