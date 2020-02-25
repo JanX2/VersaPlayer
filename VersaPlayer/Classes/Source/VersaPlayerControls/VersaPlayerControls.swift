@@ -136,10 +136,9 @@ open class VersaPlayerControls: View {
     
     /// Notifies when video quality changed
     ///
-    open func videoQualityChanged(to quality: VideoQuality) {
-        print("Changed")
-    }
-    
+    open func videoQualityChanged(to quality: VideoQuality) {}
+    open func availableVideoQualitiesChanged(to qualities: [VideoQuality]) {}
+
     public func setSeekbarSlider(start startValue: Double, end endValue: Double, at time: Double) {
         #if os(macOS)
         seekbarSlider?.minValue = startValue
@@ -296,6 +295,11 @@ open class VersaPlayerControls: View {
         NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
             guard let self = self, let videoQuality = notification.userInfo?["data"] as? VideoQuality else { return }
             self.checkOwnershipOf(object: notification.object, completion: self.videoQualityChanged(to: videoQuality))
+        }
+
+        NotificationCenter.default.addObserver(forName: VersaPlayer.VPlayerNotificationName.availableVideoQualitiesChanged.notification, object: nil, queue: OperationQueue.main) {[weak self] (notification) in
+            guard let self = self, let videoQualities = notification.userInfo?["data"] as? [VideoQuality] else { return }
+            self.checkOwnershipOf(object: notification.object, completion: self.availableVideoQualitiesChanged(to: videoQualities))
         }
     }
     

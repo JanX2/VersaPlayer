@@ -29,7 +29,8 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
         case endBuffering = "VERSA_PLAYER_END_BUFFERING"
         case didEnd = "VERSA_PLAYER_END_PLAYING"
         case videoQualityChanged = "VERSA_PLAYER_VIDEO_QUALITY_CHANGED"
-        
+        case availableVideoQualitiesChanged = "VERSA_PLAYER_AVAILABLE_VIDEO_QUALITIES_CHANGED"
+
         /// Notification name representation
         public var notification: NSNotification.Name {
             return NSNotification.Name.init(self.rawValue)
@@ -47,12 +48,28 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
     /// Whether player is buffering
     public var isBuffering: Bool = false
     
-    public var quality: VideoQuality = .init(type: .auto, resolution: .zero)
-    
+    public var currentQuality: VideoQuality {
+        didSet {
+            NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": currentQuality])
+        }
+    }
+    public var availableQualities: [VideoQuality] {
+        didSet {
+            availableQualities = [.auto] + availableQualities.filter{$0.type != .auto}
+            NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.availableVideoQualitiesChanged.notification, object: self, userInfo: ["data": availableQualities])
+        }
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVPlayerItemTimeJumped, object: self)
         NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: self)
         removeObserver(self, forKeyPath: "status")
+    }
+    
+    public override init() {
+        currentQuality = .auto
+        availableQualities = [currentQuality]
+        super.init()
     }
     
     /// Play content
@@ -243,14 +260,14 @@ extension VersaPlayer {
                     videoResolution = newSize
                 }
                 var resolutionChanged: Bool = false
-                if quality.resolution.height != videoResolution.height {
+                if currentQuality.resolution.height != videoResolution.height {
                     resolutionChanged = true
                 }
-                if quality.type == .auto {
-                    quality.resolution = videoResolution
+                if currentQuality.type == .auto {
+                    currentQuality.resolution = videoResolution
                 }
                 if resolutionChanged {
-                    NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": quality])
+                    NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": currentQuality])
                 }
             default:
                 break;
