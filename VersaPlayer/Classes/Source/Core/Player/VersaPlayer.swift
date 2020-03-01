@@ -50,6 +50,9 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
     
     public var currentQuality: VideoQuality {
         didSet {
+            if #available(iOS 11.0, *) {
+                currentItem?.preferredMaximumResolution = currentQuality.type == .manual ? currentQuality.resolution : .zero
+            }
             NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": currentQuality])
         }
     }
@@ -108,7 +111,9 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
             currentItem!.removeObserver(self, forKeyPath: "status")
             currentItem!.removeObserver(self, forKeyPath: "presentationSize")
         }
-        
+        if #available(iOS 11.0, *) {
+            item?.preferredMaximumResolution = currentQuality.type == .manual ? currentQuality.resolution : .zero
+        }
         super.replaceCurrentItem(with: item)
         NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.assetLoaded.notification, object: self, userInfo: nil)
         if let newItem = currentItem ?? item {
