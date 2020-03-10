@@ -119,4 +119,7 @@ open class VersaPlayerControlsBehaviour {
         showingControls = true
     }
     
+    func resetHideTime() {
+        activationTime = elapsedTime
+    }
 }

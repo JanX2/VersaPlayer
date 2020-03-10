@@ -320,18 +320,21 @@ open class VersaPlayerControls: View {
     
     /// Skip forward (n) seconds in time
     @IBAction open func skipForward(sender: Any? = nil) {
+        behaviour.resetHideTime()
         let time = handler.player.currentTime() + CMTime(seconds: skipSize, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         handler.player.seek(to: time)
     }
     
     /// Skip backward (n) seconds in time
     @IBAction open func skipBackward(sender: Any? = nil) {
+        behaviour.resetHideTime()
         let time = handler.player.currentTime() - CMTime(seconds: skipSize, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         handler.player.seek(to: time)
     }
     
     /// End seeking
     @IBAction open func seekingEnd(sender: Any? = nil) {
+        behaviour.resetHideTime()
         handler.isSeeking = false
         if wasPlayingBeforeSeeking {
             handler.play()
@@ -383,12 +386,14 @@ open class VersaPlayerControls: View {
     
     /// Toggle fullscreen mode
     @IBAction open func toggleFullscreen(sender: Any? = nil) {
+        behaviour.resetHideTime()
         fullscreenButton?.set(active: !handler.isFullscreenModeEnabled)
         handler.setFullscreen(enabled: !handler.isFullscreenModeEnabled)
     }
     
     /// Toggle playback
     @IBAction open func togglePlayback(sender: Any? = nil) {
+        behaviour.resetHideTime()
         if handler.isRewinding || handler.isForwarding {
             handler.player.rate = 1
             playPauseButton?.set(active: true)
@@ -407,6 +412,7 @@ open class VersaPlayerControls: View {
     
     /// Toggle rewind
     @IBAction open func rewindToggle(sender: Any? = nil) {
+        behaviour.resetHideTime()
         if handler.player.currentItem?.canPlayFastReverse ?? false {
             if handler.isRewinding {
                 rewindButton?.set(active: false)
@@ -430,6 +436,7 @@ open class VersaPlayerControls: View {
     
     /// Forward toggle
     @IBAction open func forwardToggle(sender: Any? = nil) {
+        behaviour.resetHideTime()
         if handler.player.currentItem?.canPlayFastForward ?? false {
             if handler.isForwarding {
                 forwardButton?.set(active: false)
