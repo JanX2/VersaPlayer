@@ -61,8 +61,8 @@ open class VersaPlayerControlsBehaviour {
     open func update(with time: TimeInterval) {
         elapsedTime = time
         if showingControls && shouldHideControls && !controls.handler.player.isBuffering && !controls.handler.isSeeking && controls.handler.isPlaying {
-            let timediff = elapsedTime - activationTime
-            if timediff >= deactivationTimeInterval {
+            let timediff = Date().timeIntervalSince1970 - activationTime
+            if timediff >= deactivationTimeInterval * 1000 {
                 hide()
             }
         }
@@ -110,7 +110,7 @@ open class VersaPlayerControlsBehaviour {
         if !shouldShowControls {
             return
         }
-        activationTime = elapsedTime
+        activationTime = Date().timeIntervalSince1970
         if activationBlock != nil {
             activationBlock!(controls)
         }else {
@@ -120,6 +120,6 @@ open class VersaPlayerControlsBehaviour {
     }
     
     open func resetHideTime() {
-        activationTime = elapsedTime
+        activationTime = Date().timeIntervalSince1970
     }
 }
