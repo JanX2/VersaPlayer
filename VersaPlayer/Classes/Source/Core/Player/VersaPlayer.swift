@@ -48,17 +48,20 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
     /// Whether player is buffering
     public var isBuffering: Bool = false
     
-    public var currentQuality: VideoQuality {
+    public var currentQuality: VideoQuality? {
         didSet {
-            if #available(iOS 11.0, *) {
-                currentItem?.preferredMaximumResolution = currentQuality.type == .manual ? currentQuality.resolution : .zero
+            guard let currentQuality = currentQuality else {return}
+            if oldValue != nil {
+                let newItem = VersaPlayerItem(url: currentQuality.url)
+                newItem.seek(to: currentTime())
+                replaceCurrentItem(with: newItem)
             }
             NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": currentQuality])
         }
     }
+    
     public var availableQualities: [VideoQuality] {
         didSet {
-            availableQualities = [.auto] + availableQualities.filter{$0.type != .auto}
             NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.availableVideoQualitiesChanged.notification, object: self, userInfo: ["data": availableQualities])
         }
     }
@@ -70,8 +73,13 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
     }
     
     public override init() {
-        currentQuality = .auto
-        availableQualities = [currentQuality]
+        availableQualities = []
+        super.init()
+    }
+    
+    public init(initialQuality: VideoQuality) {
+        currentQuality = initialQuality
+        availableQualities = [initialQuality]
         super.init()
     }
     
@@ -111,8 +119,13 @@ open class VersaPlayer: AVPlayer, AVAssetResourceLoaderDelegate {
             currentItem!.removeObserver(self, forKeyPath: "status")
             currentItem!.removeObserver(self, forKeyPath: "presentationSize")
         }
-        if #available(iOS 11.0, *) {
-            item?.preferredMaximumResolution = currentQuality.type == .manual ? currentQuality.resolution : .zero
+        if let url = (item?.asset as? AVURLAsset)?.url {
+            if currentQuality == nil {
+                currentQuality = .init(type: .auto, url: url, resolution: .zero)
+            }
+            if availableQualities.isEmpty {
+                availableQualities = [currentQuality!]
+            }
         }
         super.replaceCurrentItem(with: item)
         NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.assetLoaded.notification, object: self, userInfo: nil)
@@ -265,14 +278,14 @@ extension VersaPlayer {
                     videoResolution = newSize
                 }
                 var resolutionChanged: Bool = false
-                if currentQuality.resolution.height != videoResolution.height {
+                if currentQuality?.resolution.height != videoResolution.height {
                     resolutionChanged = true
                 }
-                if currentQuality.type == .auto {
-                    currentQuality.resolution = videoResolution
+                if currentQuality?.type == .auto {
+                    currentQuality?.resolution = videoResolution
                 }
-                if resolutionChanged {
-                    NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": currentQuality])
+                if resolutionChanged && currentQuality != nil {
+                    NotificationCenter.default.post(name: VersaPlayer.VPlayerNotificationName.videoQualityChanged.notification, object: self, userInfo: ["data": currentQuality!])
                 }
             default:
                 break;

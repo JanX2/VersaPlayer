@@ -29,12 +29,13 @@ public protocol PIPProtocol {}
 #endif
 
 public class VideoQuality {
-    public static var auto: VideoQuality = .init(type: .auto, resolution: .zero)
     public var type: VideoQualityType
+    public var url: URL
     public var resolution: CGSize
     
-    public init(type: VideoQualityType, resolution: CGSize) {
+    public init(type: VideoQualityType, url: URL, resolution: CGSize) {
         self.type = type
+        self.url = url
         self.resolution = resolution
     }
 }
